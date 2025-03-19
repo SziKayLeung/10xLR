@@ -18,38 +18,14 @@
 
 library(Signac)
 library(Seurat)
-# library(EnsDb.Hsapiens.v86)
-# library(BSgenome.Hsapiens.UCSC.hg38)
 library(magrittr)
 library(ggplot2)
 
-args = commandArgs(trailingOnly = T)
-
-
-## ----------  set dir and files  --------------------
-
-# set dir
-dir_data = args[1]
-# dir_data = "/lustre/projects/Research_Project-MRC190311/SingleCell/BMIAMP/3_preprocessed/11062_NP16_239_PFC/"
-dir_out = args[2]
-# dir_out = "/lustre/projects/Research_Project-MRC190311/SingleCell/BMIAMP/4_clustered/"
-sample_id = args[3]
-# sample_id = "11062_NP16_239_PFC"
-
-
-dir_id = paste0(dir_out, sample_id, "/")
-dir_fig = paste0(dir_id, "figures/")
-if(!file.exists(dir_out)){dir.create(dir_out)}
-if(!file.exists(dir_id)){dir.create(dir_id)}
-if(!file.exists(dir_fig)){dir.create(dir_fig)}
-
-
+dir_out = "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/10XSingleCell/pilot_V0311/CellClassification/"
 
 ## -------------- Load processed sample data ----------------
 
 load(file = paste0(dir_data, "processed_data.RData"))
-
-
 
 ## -------------- Gene expression data processing ----------------
 
@@ -64,11 +40,10 @@ sc = NormalizeData(sc, verbose = F) %>%
           reduction.name = "umap.rna", reduction.key = "rnaUMAP_", verbose = F)
 
 # elbow plot for RNA PCA
-pdf(paste0(dir_fig, "rna-pca-elbow-plot.pdf"), width = 6, height = 6)
+pdf(paste0(dir_out, "rna-pca-elbow-plot.pdf"), width = 6, height = 6)
 ElbowPlot(sc, reduction = "pca.rna")
 invisible(dev.off())
   
-
 ## -------------- ATAC data processing ----------------
 
 # standard scATAC processing (latent semantic indexing, LSI)
@@ -81,10 +56,9 @@ sc = RunTFIDF(sc) %>%
           reduction.name = "umap.atac", reduction.key = "atacUMAP_")
 
 # check correlation between LSI components and sequencing depth (1st component captures seq depth so remove from downstream analysis)
-pdf(paste0(dir_fig, "atac-lsi-plot.pdf"), width = 6, height = 4)
+pdf(paste0(dir_out, "atac-lsi-plot.pdf"), width = 6, height = 4)
 DepthCor(sc)
 invisible(dev.off())
-
 
 
 ## -------------- Multimodal weighted nearest neighbour analysis ----------------
@@ -99,13 +73,13 @@ for (i in c(0.05, 0.1, 0.25, 0.5, 0.8)){
 }
 
 # plot relative modality weights
-pdf(paste0(dir_fig, "wsnn-weights.pdf"), width = 6, height = 4)
+pdf(paste0(dir_out, "wsnn-weights.pdf"), width = 6, height = 4)
 VlnPlot(sc, features = "RNA.weight", group.by = "wsnn_res.0.5", sort = T, pt.size = 0.1) + NoLegend()
 invisible(dev.off())
 
 ## ----------  plot cluster resolutions UMAP  --------------------
 
-pdf(paste0(dir_fig, "umap-cluster-resolution.pdf"), width = 6, height = 6)
+pdf(paste0(dir_out, "umap-cluster-resolution.pdf"), width = 6, height = 6)
 print(DimPlot(sc, reduction = "umap.wnn", group.by = "wsnn_res.0.05", label = T))
 print(DimPlot(sc, reduction = "umap.wnn", group.by = "wsnn_res.0.1", label = T))
 print(DimPlot(sc, reduction = "umap.wnn", group.by = "wsnn_res.0.25", label = T))
@@ -117,15 +91,13 @@ dev.off()
 Idents(sc) = "wsnn_res.0.05"
 
 # plot UMAPs and clustering results
-pdf(paste0(dir_fig, "wsnn-umap.pdf"), width = 15, height = 5)
+pdf(paste0(dir_out, "wsnn-umap.pdf"), width = 15, height = 5)
 p1 <- DimPlot(sc, reduction = "umap.rna", label = TRUE, label.size = 2.5, repel = TRUE, pt.size = 0.4) + ggtitle("RNA")
 p2 <- DimPlot(sc, reduction = "umap.atac", label = TRUE, label.size = 2.5, repel = TRUE, pt.size = 0.4) + ggtitle("ATAC")
 p3 <- DimPlot(sc, reduction = "umap.wnn", label = TRUE, label.size = 2.5, repel = TRUE, pt.size = 0.4) + ggtitle("WNN")
 p1 + p2 + p3 & NoLegend() & theme(plot.title = element_text(hjust = 0.5))
 invisible(dev.off())
 
-
-
 ## -------------- Save clustered sample data ----------------
 
-save(sc, file = paste0(dir_id, "clustered_data.RData"))
+save(sc, file = paste0(dir_out, "clustered_data.RData"))
