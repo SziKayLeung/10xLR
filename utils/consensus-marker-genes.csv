@@ -1,0 +1,36 @@
+﻿Celltype,Marker,Select
+Astrocytes,AQP4,TRUE
+Astrocytes,FGFR3,TRUE
+Astrocytes,GFAP,TRUE
+Astrocytes,GJA1,FALSE
+Excitatory neurons,CUX2,FALSE
+Excitatory neurons,RBFOX3,TRUE
+Excitatory neurons,RORB,FALSE
+Excitatory neurons,SATB2,TRUE
+Excitatory neurons,SLC17A7,TRUE
+Excitatory neurons,SNAP25,TRUE
+Excitatory neurons,SYT1,TRUE
+Inhibitory neurons,GAD1,TRUE
+Inhibitory neurons,GAD2,TRUE
+Inhibitory neurons,ADARB2,TRUE
+Inhibitory neurons,SOX6,TRUE
+Inhibitory neurons,LHX6,FALSE
+Inhibitory neurons,PVALB,FALSE
+Microglia,C1QA,TRUE
+Microglia,C1QB,TRUE
+Microglia,CSF1R,TRUE
+Microglia,PTPRC,TRUE
+Microglia,P2RY12,TRUE
+Oligodendrocytes,MAG,TRUE
+Oligodendrocytes,MOG,TRUE
+Oligodendrocytes,PLP1,TRUE
+Oligodendrocytes,OPALIN,TRUE
+Oligodendrocytes,MOBP,TRUE
+OPCs,PDGFRA,TRUE
+OPCs,VCAN,TRUE
+OPCs,CSPG4,TRUE
+OPCs,PTPRZ1,TRUE
+Pericytes,ATP1A2,FALSE
+Pericytes,PTGDS,FALSE
+Pericytes,LAMA2,FALSE
+Pericytes,PDGFRB,FALSE
