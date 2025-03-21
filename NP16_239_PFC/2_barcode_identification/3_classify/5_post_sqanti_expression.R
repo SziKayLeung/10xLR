@@ -14,7 +14,9 @@ suppressWarnings({
   suppressMessages(library("ggplot2"))
   suppressMessages(library("ggVennDiagram"))
   suppressMessages(library("cowplot"))
-  library("scales")
+  suppressMessages(library("scales"))
+  suppressMessages(library("ggbio"))
+  suppressMessages(library("GenomicRanges"))
 })
 
 # other function scripts
@@ -39,6 +41,9 @@ plot_RNAtype <- function(class_file, geneType){
 
 ## ---------- load files -----------------
 
+# RNA type of transcripts from GENCODE
+geneType <- read.csv(paste0(LOGEN,"0_utils/references/gencode.v40.annotation.geneannotation_corrected.csv"), header = T)
+
 dir <- "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/1_Projects/10XSingleCell/pilot_V0311/postCellClassification/"
 
 # SQANTI classification file
@@ -59,9 +64,6 @@ barcode <- fread(paste0(dir, "NP16_239_PFCputative_bc_filtered_annotated_isoform
 # import marker genes
 dir_script = "C:/Users/sl693/OneDrive - University of Exeter/ExeterPostDoc/2_Scripts/10xLR/"
 marker_genes = read.csv(paste0(dir_script, "utils/consensus-marker-genes.csv"))
-
-# RNA type of transcripts from GENCODE
-geneType <- read.csv(paste0(LOGEN,"0_utils/references/gencode.v40.annotation.geneannotation_corrected.csv"), header = T)
 
 
 ## ---------- group the barcode by cell type and isoform  -----------------
@@ -93,13 +95,27 @@ table(novelGenes$polyA_motif_found)
 table(novelGenes$all_canonical)
 ggplot(novelGenes, aes(x = exons, y = length, colour = structural_category, shape = polyA_motif_found)) + geom_point()
 
-RNAType <- plot_RNAtype(class.files, geneType)
+RNAType <- plot_RNAtype(filtered.class.files, geneType)
 RNAType$plot
 
 merge(as.data.frame(table(preFilteredRNAType$classfile$Class)),
       as.data.frame(table(RNAType$classfile$Class)), by = "Var1") %>% 
   mutate(dropOffRate = (Freq.y - Freq.x)/ Freq.y) %>%
   arrange(dropOffRate)
+
+## ---------- summary statistics ------------
+
+message("Number of reads kept from filtering mono-exonic isoforms:", sum(class.files$FL))
+message("Number of reads kept from expression filtering (minimum 5 FL reads):", sum(filtered.class.files$FL))
+message("Number of reads to known genes:", sum(class.files.annoGenes$FL))
+message("Number of reads to novel genes:", sum(novelGenes$FL))
+
+message("Number of isoforms:", nrow(filtered.class.files))
+message("Number of protein coding isoforms:", nrow(RNAType$classfile %>% filter(Class == "protein_coding")))
+message("number of genes with protein coding isoforms: ", length(unique(RNAType$classfile %>% filter(Class == "protein_coding") %>% .[,c("associated_gene")])))
+
+message("Number of genes:", length(unique(filtered.class.files$associated_gene)))
+message("Number of known genes:", length(unique(class.files.annoGenes$associated_gene)))
 
 
 ## ---------- plot per gene  -----------------
@@ -115,21 +131,27 @@ plot_cellType_by_gene <- function(gene){
     ggplot(., aes(x = cellType, y = count, colour = structural_category)) + geom_boxplot() +
     theme_classic() +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-    labs(x = "Cell Type", y = "Number of FL reads", title = gene)
+    labs(x = "Cell Type", y = "Number of FL reads", title = gene) 
   
   return(p)
 }
 
-Excitatory <- lapply(marker_genes[marker_genes$Celltype == "Excitatory neurons","Marker"], function(x) plot_cellType_by_gene(x))
+
+`Excitatory neurons` <- lapply(marker_genes[marker_genes$Celltype == "Excitatory neurons","Marker"], function(x) plot_cellType_by_gene(x))
 Astrocytes <- lapply(marker_genes[marker_genes$Celltype == "Astrocytes","Marker"], function(x) plot_cellType_by_gene(x))
 Microglia <- lapply(marker_genes[marker_genes$Celltype == "Microglia","Marker"], function(x) plot_cellType_by_gene(x))
-Inhibitory <- lapply(marker_genes[marker_genes$Celltype == "Inhibitory neurons","Marker"], function(x) plot_cellType_by_gene(x))
+`Inhibitory neurons` <- lapply(marker_genes[marker_genes$Celltype == "Inhibitory neurons","Marker"], function(x) plot_cellType_by_gene(x))
 Oligodendrocytes <- lapply(marker_genes[marker_genes$Celltype == "Oligodendrocytes","Marker"], function(x) plot_cellType_by_gene(x))
-plot_grid(plotlist = Excitatory)
-plot_grid(plotlist = Astrocytes)
-plot_grid(plotlist = Microglia)
-plot_grid(plotlist = Inhibitory)
-plot_grid(plotlist = Oligodendrocytes)
+OPCs <- lapply(marker_genes[marker_genes$Celltype == "OPCs","Marker"], function(x) plot_cellType_by_gene(x))
+Pericytes <- lapply(marker_genes[marker_genes$Celltype == "Pericytes","Marker"], function(x) plot_cellType_by_gene(x))
+
+titles <- lapply(unique(marker_genes$Celltype), function(x) ggdraw() + draw_label(x, fontface = 'bold', size = 14))
+names(titles) <- unique(marker_genes$Celltype)
+pCellTypeByGenes <- lapply(unique(marker_genes$Celltype), function(x) plot_grid(titles[[x]], plot_grid(plotlist = get(x)), ncol = 1, rel_heights = c(0.1, 1)))
+
+pdf(paste0(dir, "transcriptExpressionLongReadCellType.pdf"), width = 12, height = 10)
+pCellTypeByGenes
+dev.off()
 
 ## ---------- venn diagram of transcripts and genes across cell types  -----------------
 
@@ -146,3 +168,55 @@ ggVennDiagram(final_cellType_transcript, label = "count")
 cellType_gene <- lapply(final_cellType_transcript, function(x)
   unique(class.files.annoGenes[class.files.annoGenes$isoform %in% x, "associated_gene"]))
 ggVennDiagram(cellType_gene, label = "count")
+
+
+## ---------- distribution of transcripts across genome-----------------
+
+### generate gtf files on ISCA and transfer to onedrive
+#write.table(novelGenes$isoform,paste0(dir,"unique_novelGenes_ID.csv"), quote = F, row.names = F, col.names = F)
+#grep -f unique_novelGenes_ID.csv pilotPFC_collapsed_corrected.gtf > pilotPFC_novelGenes.filtered.gtf
+
+#proteinCoding <- RNAType$classfile %>% filter(Class == "protein_coding")
+#write.table(proteinCoding$isoform,paste0(dir,"unique_proteincoding_ID.csv"), quote = F, row.names = F, col.names = F)
+#grep -f unique_proteincoding_ID.csv pilotPFC_collapsed_corrected.gtf > pilotPFC_proteinCodingGenes.filtered.gtf
+
+
+plot_distribution_across_genome <- function(gtf){
+  
+  # read gtf
+  data <- read.table(paste0(dir, "/", gtf), sep="\t", header=FALSE, stringsAsFactors=FALSE)
+  colnames(data) <- c("chr", "source", "type", "start", "end", "score", "strand", "phase", "attributes")
+  
+  # subset to transcripts only and those annotated to standard chromosomes
+  transcripts <- subset(data, type == "transcript")
+  chromosomes <- paste0("chr", c(1:22, "X","Y"))
+  transcripts2chr <- transcripts %>% filter(chr %in% chromosomes)
+  
+  # Convert to GenomicRanges object
+  gr <- GRanges(seqnames = transcripts2chr$chr,
+                ranges = IRanges(start = transcripts2chr$start, end = transcripts2chr$end),
+                strand = transcripts2chr$strand)
+  ptranscriptAcrossGenome <- autoplot(gr) + ggtitle("Transcript Distribution Across Genome")
+  
+  ptranscriptsAcrossChr <- lapply(chromosomes, function(x) {
+    chr_transcripts <- transcripts %>% filter(chr == x)
+    
+    # Only plot if there are transcripts for this chromosome
+    if (nrow(chr_transcripts) > 0) {
+      plot_transcripts_across_genome(chr_transcripts, x)
+    } else {
+      return(NULL)  # Pass NULL if no transcripts
+    }
+  })
+  
+  output <- list(ptranscriptAcrossGenome,ptranscriptsAcrossChr)
+  return(output)
+}
+
+novelGenesGtf <- plot_distribution_across_genome("pilotPFC_novelGenes.filtered.gtf")
+
+pdf(paste0(dir, "novelGenesAcrossChr.pdf"), width = 10, height = 6)
+novelGenesGtf[[1]]
+novelGenesGtf[[2]]
+dev.off()
+
