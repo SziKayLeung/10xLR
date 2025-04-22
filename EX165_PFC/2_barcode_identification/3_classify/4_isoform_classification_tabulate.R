@@ -38,12 +38,16 @@ dev.off()
 
 ## ---------- Filtering long-read sequencing data by barcode quality -----------------  
 
+message("Number of ONT reads identified with barcodes: ", nrow(barcodes))
+# Number of ONT reads identified with barcodes:151620873
+
 #1. Keeping reads that only contains AAAAAA and TTTT post UMI 
 #2. Keeping reads with minimum barcode quality Q > 12 (94% accuracy, default threshold)
 #3. Geeping reads that have GATCT, CTAGA in sequence before barcode
 
 # 1. Containing only AAA and TTT post UMI
 filteredbarcodes <- barcodes %>% filter(post_umi_flanking %in% c("AAAA", "AAAAA", "TTTTT", "TTTT"))
+message("Further filtered by those with AAA and TTT post UMI: ", nrow(filteredbarcodes))
 
 # keeping record of the number of barcodes with other sequences flanking post umi
 post_umi_groups <- barcodes %>% group_by(post_umi_flanking) %>% tally() %>% as.data.frame()
@@ -51,7 +55,8 @@ write.csv(post_umi_groups, paste0(dir, "post_umi_groups.csv"), row.names = F)
 
 # 2. Minimum barcode quality > 12 
 filteredbarcodesQual <- filteredbarcodes %>% filter(putative_bc_min_q >= 12)
-
+message("Further filtered by minimum barcode quality Q > 12: ", nrow(filteredbarcodesQual))
+        
 # plotting a distribution of barcode quality
 pdf(paste0(dir, "hist_barcode_quality.pdf"))
 hist(barcodes$putative_bc_min_q)
@@ -59,6 +64,7 @@ dev.off()
 
 # 3. GATCT, CTAGA in sequence before barcode
 longReadBarcodesFiltered <- filteredbarcodesQual %>% filter(pre_bc_flanking %in% c("GATCT", "CTAGA"))
+message("Further filtered by having GATCT, CTAGA in sequence before barcode: ", nrow(longReadBarcodesFiltered))
 
 # plotting a distribution of polyT end sequences
 # not quite sure what metric does
@@ -76,6 +82,8 @@ write.csv(longReadBarcodesFiltered, paste0(outputdir, "EX165_PFCputative_bc_filt
 longReadBarcodesFiltered <- as.data.table(longReadBarcodesFiltered)
 barcodesAnno<- as.data.table(barcodesAnno)
 mergedFinal <- merge(filteredbarcodesQual, barcodesAnno, by.x = "putative_bc", by.y = "barcode")
+nrow("After merging with barcodes classified by cell type: ", nrow(mergedFinal))
+#After merging with barcodes classified by cell type: 64127122
 
 
 ## ---------- Collapsing cell-type specific long-read to isoforms -----------------  
