@@ -15,7 +15,7 @@ module load Miniconda2
 source activate nanopore
 
 # raw long-read FASTQ basecalled
-LRFASTQ=$(ls /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Gina/P0179_20250326_11623/*)
+LRFASTQ=$(ls -d /lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Gina/P0179_20250326_11623/fastq_pass/*)
 WKD_ROOT=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Gina/analysis/EX165_PFC
 
 # merge fastq files

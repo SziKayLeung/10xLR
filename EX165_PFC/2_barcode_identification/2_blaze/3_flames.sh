@@ -19,8 +19,12 @@ GFF=/lustre/projects/Research_Project-MRC148213/lsl693/references/human/gencode.
 inputDir=/lustre/projects/Research_Project-MRC190311/longReadSeq/ONTRNA/Gina/analysis/EX165_PFC/6_blaze
 
 mkdir -p ${inputDir}/3_flames/
+
+cd ${inputDir}/1_blaze/
+gunzip EX165_PFCmatched_reads.fastq.gz
+
 sc_long_pipeline.py --gff3 ${GFF} --infq ${inputDir}/1_blaze/EX165_PFCmatched_reads.fastq \
--b ${inputDir}/2_minimap2/EX165_PFCmatched_reads_filtered_sorted.bam \
+-b ${inputDir}/1_blaze/2_minimap/EX165_PFCmatched_reads_filtered_sorted.bam \
 -o  ${inputDir}/3_flames/ 	\
 --genomefa ${GENOME_FASTA} \
 --minimap2_dir /lustre/projects/Research_Project-MRC190311/software/minimap2
